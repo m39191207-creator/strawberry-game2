@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Собери клубничку!</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #score-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 15px;
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        #score {
+            font-size: 24px;
+            color: #E91E63;
+            display: flex;
+            align-items: center;
+        }
+        
+        .strawberry-icon {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+        }
+        
+        #basket {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            width: 100px;
+            height: 80px;
+            transform: translateX(-50%);
+            z-index: 10;
+            transition: transform 0.1s;
+        }
+        
+        .berry {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            cursor: pointer;
+            z-index: 5;
+            transition: transform 0.2s;
+        }
+        
+        .berry:hover {
+            transform: scale(1.1);
+        }
+        
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 50px;
+            background: linear-gradient(to bottom, #388E3C, #4CAF50);
+            border-top: 4px solid #1B5E20;
+        }
+        
+        #start-screen, #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            color: white;
+        }
+        
+        .panel {
+            background: #FF4081;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            max-width: 80%;
+        }
+        
+        h1 {
+            color: #FFF;
+            margin-top: 0;
+            text-shadow: 2px 2px 0 #E91E63;
+        }
+        
+        button {
+            background: #FFEB3B;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            border-radius: 50px;
+            margin-top: 20px;
+            cursor: pointer;
+            font-family: 'Comic Sans MS', cursive;
+            box-shadow: 0 5px 0 #FFC107;
+            transition: all 0.1s;
+        }
+        
+        button:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 0 #FFC107;
+        }
+        
+        #game-over {
+            display: none;
+        }
+        
+        .collect-animation {
+            position: absolute;
+            font-size: 30px;
+            color: #E91E63;
+            font-weight: bold;
+            animation: fadeUp 1s forwards;
+            pointer-events: none;
+            z-index: 20;
+        }
+        
+        @keyframes fadeUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-100px); opacity: 0; }
+        }
+        
+        @keyframes fall {
+            from { transform: translateY(-100px); }
+            to { transform: translateY(calc(100vh - 100px)); }
+        }
+        
+        /* Адаптивность для мобильных устройств */
+        @media (max-width: 768px) {
+            #basket {
+                width: 80px;
+                height: 64px;
+            }
+            
+            .berry {
+                width: 40px;
+                height: 40px;
+            }
+            
+            #score {
+                font-size: 20px;
+            }
+            
+            .strawberry-icon {
+                width: 24px;
+                height: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="score-container">
+            <div id="score">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjRTkxRTYzIiBkPSJNNTA2LjUgMTY1LjNjLTQuOC0xMS4xLTE4LjEtMTUuOS0yOS4yLTExLjFsLTIwLjYgOS4xYy0xLjYtMzYuMS0xNS45-65uTXMyOC4zLTY1LjcgNjQuNC03Ny40YzExLjEtNC44IDE1LjktMTguMSAxMS4xLTI5LjJzLTE4LjEtMTUuOS0yOS4yLTExLjFjLTUzLjIgMjMuNC04NS4zIDc3LjUtODEuOSAxMzUuMWwtNDAuOC0xOC4xYy0xMS4xLTQuOC0yNC4zIDAtMjkuMiAxMS4xcy4xIDI0LjMgMTEuMiAyOS4ybDg2LjcgMzguNmMxMC4yIDQuNSA3Ni44LTM0LjEgOTcuOS00NC44IDcuOS00LjEgMTEuNS0xMi44IDkuNS0yMS4xem0tNDA3LjkgMjUuOWwtODYuNy0zOC42Yy0xMS4xLTQuOC0yNC4zIDAtMjkuMiAxMS4xLTQuOCAxMS4xIDAgMjQuMyAxMS4xIDI5LjJsNDAuOCAxOC4xYzMuNCA1Ny41LTI4LjcgMTExLjYtODEuOSAxMzUuMS0xMS4xIDQuOC0xNS45IDE4LjEtMTEuMSAyOS4yIDQuOCAxMS4xIDE4LjEgMTUuOSAyOS4yIDExLjEgMzYuMS0xNi4xIDYwLjUtNTAuNSA2NC40LTg3LjZsMjAuNiA5LjFjMTEuMSA0LjggMjQuMyAwIDI5LjItMTEuMSA0LjgtMTEuMSAwLTI0LjMtMTEuMS0yOS4ybC0zOC41LTE3LjJjMjIuOS0xOS42IDM2LjUtNDkuNSAzNi41LTgxLjggMC0zMi4xLTEzLjQtNjEuOC0zNi4xLTgxLjR6TTI1NiAyODhjLTM1LjMgMC02NC0yOC43LTY0LTY0czI4LjctNjQgNjQtNjQgNjQgMjguNyA2NCA2NC0yOC43IDY0LTY0IDY0eiIvPjwvc3ZnPg==" class="strawberry-icon" alt="🍓">
+                <span id="score-value">0</span>
+            </div>
+        </div>
+        
+        <div class="ground"></div>
+        <img id="basket" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjNUExQjJDIiBkPSJNNDA1LjQgMzg0LjVjLTMuNi0yLjUtOC4yLTEuNy0xMC43IDEuOWwtMjEuOSAzMS4zYy0yLjUgMy42LTEuNyA4LjIgMS45IDEwLjcgMy42IDIuNSA4LjIgMS43IDEwLjctMS45bDIxLjktMzEuM2MyLjUtMy42IDEuNy04LjItMS45LTEwLjl6TTE1MS4xIDQxOC40Yy0yLjUtMy42LTcuMS00LjQtMTAuNy0xLjktMy42IDIuNS00LjQgNy4xLTEuOSAxMC43bDIxLjkgMzEuM2MyLjUgMy42IDcuMSA0LjQgMTAuNyAxLjkgMy42LTIuNSA0LjQtNy4xIDEuOS0xMC43bC0yMS45LTMxLjN6Ii8+PHBhdGggZmlsbD0iIzhENEUyNCIgZD0iTTQ2Ni41IDIyOC40YzAtMTE0LjktOTMuMS0yMDgtMjA4LTIwOHMtMjA4IDkzLjEtMjA4IDIwOGMwIDY1LjIgMzAuNiAxMjMuNSA3OC4xIDE2MS40bC0xNi40IDQ3LjNjLTMuMyA5LjQgMS4xIDE5LjYgMTAuNSA0Mi45IDAgMCAxMDAuMi0zMC40IDEzNS45LTMwLjQgMzUuNiAwIDEzNS45IDMwLjQgMTM1LjkgMzAuNCA5LjQtMjMuMyAxMy44LTMzLjUgMTAuNS00Mi45bC0xNi40LTQ3LjNjNDcuNi0zNy45IDc4LjEtOTYuMiA3OC4xLTE2MS40eiIvPjxwYXRoIGZpbGw9IiNFRTZDNDMiIGQ9Ik0yNTguNSAyMC40YzExNC45IDAgMjA4IDkzLjEgMjA4IDIwOCAwIDY1LjItMzAuNiAxMjMuNS03OC4xIDE2MS40bC0xNi40IDQ3LjNjLTMuMyA5LjQtMjU1LjcgMC0yNTUuNyAwbC0xNi40LTQ3LjNjLTQ3LjYtMzcuOS03OC4xLTk2LjItNzguMS0xNjEuNCAwLTExNC45IDkzLjEtMjA4IDIwOC0yMDh6Ii8+PHBhdGggZmlsbD0iI0Y1OUI0QyIgZD0iTTM2OC41IDE2OC40YzAgNjEuOS01MC4xIDExMi0xMTIgMTEycy0xMTItNTAuMS0xMTItMTEyYzAtNjEuOSA1MC4xLTExMiAxMTItMTEyczExMiA1MC4xIDExMiAxMTJ6Ii8+PHBhdGggZmlsbD0iI0UxN0YzOCIgZD0iTTM2OC41IDE2OC40YzAgNjEuOS01MC4xIDExMi0xMTIgMTEycy0xMTItNTAuMS0xMTItMTEyYzAtNjEuOSA1MC4xLTExMiAxMTItMTEyczExMiA50MSAxMTIgMTEyeiIvPjxwYXRoIGZpbGw9IiNGRkZGRkYiIGQ9Ik0yODAuNSAxMjAuNGMwLTMuOS0zLjEtNy03LTdzLTcgMy4xLTcgN2MwIDMuOSAzLjEgNyA3IDdzNy0zLjEgNy03eiIvPjwvc3ZnPg==" alt="Корзинка">
+        
+        <div id="start-screen">
+            <div class="panel">
+                <h1>Собери клубничку! 🍓</h1>
+                <p>Лови падающие ягодки, кликая на них или подставляя корзинку!</p>
+                <p>Развивай реакцию и координацию!</p>
+                <button id="start-button">Начать игру</button>
+            </div>
+        </div>
+        
+        <div id="game-over">
+            <div class="panel">
+                <h1>Игра окончена! 🎮</h1>
+                <p>Ты собрал(а) <span id="final-score">0</span> ягодок!</p>
+                <button id="restart-button">Играть снова</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Элементы игры
+            const gameContainer = document.getElementById('game-container');
+            const basket = document.getElementById('basket');
+            const scoreValue = document.getElementById('score-value');
+            const startScreen = document.getElementById('start-screen');
+            const gameOverScreen = document.getElementById('game-over');
+            const startButton = document.getElementById('start-button');
+            const restartButton = document.getElementById('restart-button');
+            const finalScore = document.getElementById('final-score');
+            
+            // Переменные игры
+            let score = 0;
+            let gameActive = false;
+            let berries = [];
+            let gameSpeed = 1;
+            let berryInterval;
+            let lastTouchX = 0;
+            
+            // Изображения ягод в формате Data URL (встроенные в код)
+            const berryImages = [
+                'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjRTkxRTYzIiBkPSJNNDkzLjUgMTk1LjljLTU2LjctNTEuMS0xMzUtNjguNC0yMDguOS0zOC43LTM3LjEtMTcuNC03OC43LTI2LjctMTIxLjUtMjYuN0M3My40IDEzMC41IDAgMjAzLjkgMCAyOTUuMXMzMy45IDEzNi43IDg2LjYgMTYyLjJjMTEuNCA1LjcgMTguOSAxNy40IDE4LjkgMzAuMXYuMWMwIDExLjUtNy44IDIxLjUtMTguOSAyNC40LTM2LjYgOS43LTY1LjYgMzIuMi03OC43IDYyLjYtNS45IDEzLjcgMS4xIDI5LjIgMTUuMyAzNC4zIDE0LjIgNS4xIDI5LjUtMS4xIDM0LjMtMTUuMyAxMy4xLTMwLjQgMzkuOS00OS43IDcxLjUtNDkuN2gyLjJjMzEuNiAwIDU4LjQgMTkuMyA3MS41IDQ5LjcgNS45IDE0LjIgMTkuNiAyMC40IDM0LjMgMTUuMyAxNC4yLTUuMSAyMS4yLTIwLjYgMTUuMy0zNC4zLTEzLjEtMzAuNC00Mi4xLTUyLjktNzguNy02Mi42LTExLjEtMi45LTE4LjktMTIuOS0xOC45LTI0LjR2LS4xYzAtMTIuNyA3LjUtMjQuNCAxOC45LTMwLjEgNTIuNy0yNS41IDg2LjYtODIuMiA4Ni42LTEzNC40IDAtMzUuMi0xMy43LTY4LjUtMzguNS05OS4yeiIvPjxwYXRoIGZpbGw9IiM0Q0FGNTAiIGQ9Ik0xNjQuOSA0MjEuM2MtOC4zIDAtMTYuNi0yLjUtMjMuNC03LjQtMTQuMi05LjktMTcuNC0yOS4xLTcuNS00My4zIDI2LjYtMzcuOSA2OS45LTYwLjQgMTE2LjYtNjAuNHM5MCAzMi41IDExNi42IDYwLjRjOS45IDE0LjIgNi43IDMzLjQtNy41IDQzLjMtMTQuMiA5LjktMzMuNCA2LjctNDMuMy03LjUtMTcuOC0yNS40LTQ0LjEtNDAuMi03My44LTQwLjJzLTU2IDIyLjgtNzMuOCA0MC4yYy02LjQgOS4xLTE2LjIgMTMuNy0yNS44IDEzLjd6Ii8+PC9zdmc+',
+                'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjOTMyRThDIiBkPSJNNDY2LjUgMjU2YzAgMTE2LjQtOTQuMSAyMTAtMjEwIDIxMFM0Ni41IDM3Mi40IDQ2LjUgMjU2YzAtNjUuMiAzMC42LTEyMy4xIDc4LjEtMTYxLjFDMTAwLjIgNjEuMiAxMzUuOSAyMC40IDE3Ni41IDIwLjRjNDAuNiAwIDc2LjMgNDAuOCAxNTEuOSA3NC41IDc1LjYtMzMuNyAxMTEuMy03NC41IDE1MS45LTc0LjUgNDAuNiAwIDc2LjMgNDAuOCAxNTEuOSA3NC41IDQ3LjUgMzggNzguMSA5NS45IDc4LjEgMTYxLjF6Ii8+PHBhdGggZmlsbD0iIzdBMkQ3QyIgZD0iTTQ2Ni41IDI1NmMwIDExNi40LTk0LjEgMjEwLTIxMCAyMTBTNDYuNSAzNzIuNCA0Ni41IDI1NmMwLTY1LjIgMzAuNi0xMjMuMSA3OC4xLTE2MS4xQzEwMC4yIDYxLjIgMTM1LjkgMjAuNCAxNzYuNSAyMC40YzQwLjYgMCA3Ni4zIDQwLjggMTUxLjkgNzQuNSA3NS42LTMzLjcgMTExLjMtNzQuNSAxNTEuOS03NC41IDQwLjYgMCA3Ni4zIDQwLjggMTUxLjkgNzQuNSA0Ny41IDM4IDc4LjEgOTUuOSA3OC4xIDE2MS4xeiIvPjxjaXJjbGUgZmlsbD0iI0ZGRkZGRiIgY3g9IjE5NiIgY3k9IjIxNiIgcj0iMjAiLz48Y2lyY2xlIGZpbGw9IiNGRkZGRkYiIGN4PSIyODAiIGN5PSIyOTYiIHI9IjIwIi8+PGNpcmNsZSBmaWxsPSIjRkZGRkZGIiBjeD0iMzY4IiBjeT0iMjMyIiByPSIyMCIvPjwvc3ZnPg==',
+                'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjRkY2ODhGIiBkPSJNNDY2LjUgMjU2YzAgMTE2LjQtOTQuMSAyMTAtMjEwIDIxMFM0Ni41IDM3Mi40IDQ2LjUgMjU2YzAtNjUuMiAzMC42LTEyMy4xIDc4LjEtMTYxLjFDMTUwLjIgNjEuMiAxODUuOSAyMC40IDIyNi41IDIwLjRjNDAuNiAwIDc2LjMgNDAuOCAxNTEuOSA3NC41IDc1LjYtMzMuNyAxMTEuMy03NC41IDE1MS45LTc0LjUgNDAuNiAwIDc2LjMgNDAuOCAxNTEuOSA3NC41IDQ3LjUgMzggNzguMSA5NS45IDc4LjEgMTYxLjF6Ii8+PHBhdGggZmlsbD0iI0VBNEU2NCIgZD0iTTQ2Ni41IDI1NmMwIDExNi40LTk0LjEgMjEwLTIxMCAyMTBTNDYuNSAzNzIuNCA0Ni41IDI1NmMwLTY1LjIgMzAuNi0xMjMuMSA3OC4xLTE2MS4xQzE1MC4yIDYxLjIgMTg1LjkgMjAuNCAyMjYuNSAyMC40YzQwLjYgMCA3Ni4zIDQwLjggMTUxLjkgNzQuNSA3NS42LTMzLjcgMTExLjMtNzQuNSAxNTEuOS03NC41IDQwLjYgMCA3Ni4zIDQwLjggMTUxLjkgNzQuNSA0Ny41IDM4IDc4LjEgOTUuOSA3OC4xIDE2MS4xeiIvPjxjaXJjbGUgZmlsbD0iI0ZGRkZGRiIgY3g9IjE5NiIgY3k9IjIxNiIgcj0iMjAiLz48Y2lyY2xlIGZpbGw9IiNGRkZGRkYiIGN4PSIyODAiIGN5PSIyOTYiIHI9IjIwIi8+PGNpcmNsZSBmaWxsPSIjRkZGRkZGIiBjeD0iMzY4IiBjeT0iMjMyIiByPSIyMCIvPjwvc3ZnPg=='
+            ];
+            
+            // Звук сбора ягоды (сгенерированный)
+            const collectSound = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA");
+            
+            // Функция создания ягоды
+            function createBerry() {
+                if (!gameActive) return;
+                
+                const berry = document.createElement('div');
+                berry.className = 'berry';
+                
+                // Случайный выбор изображения ягоды
+                const randomImage = berryImages[Math.floor(Math.random() * berryImages.length)];
+                berry.style.backgroundImage = `url(${randomImage})`;
+                
+                // Случайная позиция по горизонтали
+                const leftPos = Math.random() * (gameContainer.offsetWidth - 50);
+                berry.style.left = `${leftPos}px`;
+                berry.style.top = '-50px';
+                
+                // Случайная скорость падения
+                const fallSpeed = 2 + Math.random() * 3;
+                berry.style.animation = `fall ${5/fallSpeed}s linear forwards`;
+                
+                // Добавляем ягоду в контейнер
+                gameContainer.appendChild(berry);
+                
+                // Обработчик клика по ягоде
+                berry.addEventListener('click', collectBerry);
+                
+                // Добавляем ягоду в массив
+                berries.push({
+                    element: berry,
+                    collected: false,
+                    speed: fallSpeed
+                });
+                
+                // Удаляем ягоду после завершения анимации
+                setTimeout(() => {
+                    if (berry.parentNode && !berry.collected) {
+                        gameContainer.removeChild(berry);
+                        // Удаляем из массива
+                        berries = berries.filter(b => b.element !== berry);
+                    }
+                }, 5000 / fallSpeed);
+            }
+            
+            // Функция сбора ягоды
+            function collectBerry(e) {
+                if (!gameActive) return;
+                
+                const berryElement = e.target;
+                const berryIndex = berries.findIndex(b => b.element === berryElement);
+                
+                if (berryIndex !== -1 && !berries[berryIndex].collected) {
+                    // Помечаем ягоду как собранную
+                    berries[berryIndex].collected = true;
+                    
+                    // Увеличиваем счет
+                    score++;
+                    scoreValue.textContent = score;
+                    
+                    // Воспроизводим звук
+                    collectSound.currentTime = 0;
+                    collectSound.play().catch(e => console.log("Audio play failed:", e));
+                    
+                    // Создаем анимацию сбора
+                    const animation = document.createElement('div');
+                    animation.className = 'collect-animation';
+                    animation.textContent = '+1';
+                    animation.style.left = `${e.clientX - 20}px`;
+                    animation.style.top = `${e.clientY - 20}px`;
+                    gameContainer.appendChild(animation);
+                    
+                    // Удаляем анимацию после завершения
+                    setTimeout(() => {
+                        if (animation.parentNode) {
+                            gameContainer.removeChild(animation);
+                        }
+                    }, 1000);
+                    
+                    // Удаляем ягоду
+                    gameContainer.removeChild(berryElement);
+                    berries.splice(berryIndex, 1);
+                    
+                    // Увеличиваем сложность каждые 10 очков
+                    if (score % 10 === 0) {
+                        gameSpeed += 0.2;
+                        clearInterval(berryInterval);
+                        berryInterval = setInterval(createBerry, 1000 / gameSpeed);
+                    }
+                }
+            }
+            
+            // Функция обновления позиции корзинки
+            function updateBasketPosition(x) {
+                const containerWidth = gameContainer.offsetWidth;
+                const basketWidth = basket.offsetWidth;
+                let newX = x - basketWidth / 2;
+                
+                // Ограничиваем движение корзинки в пределах экрана
+                if (newX < 0) newX = 0;
+                if (newX > containerWidth - basketWidth) newX = containerWidth - basketWidth;
+                
+                basket.style.left = `${newX}px`;
+            }
+            
+            // Обработчики событий мыши
+            gameContainer.addEventListener('mousemove', (e) => {
+                updateBasketPosition(e.clientX);
+            });
+            
+            // Обработчики событий касания для мобильных устройств
+            gameContainer.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                lastTouchX = touch.clientX;
+                updateBasketPosition(touch.clientX);
+            }, { passive: false });
+            
+            // Функция проверки столкновений
+            function checkCollisions() {
+                if (!gameActive) return;
+                
+                const basketRect = basket.getBoundingClientRect();
+                
+                for (let i = 0; i < berries.length; i++) {
+                    const berry = berries[i];
+                    if (berry.collected) continue;
+                    
+                    const berryRect = berry.element.getBoundingClientRect();
+                    
+                    // Проверяем, коснулась ли ягода корзинки
+                    if (
+                        berryRect.bottom >= basketRect.top + 20 &&
+                        berryRect.top <= basketRect.bottom - 10 &&
+                        berryRect.right >= basketRect.left + 10 &&
+                        berryRect.left <= basketRect.right - 10
+                    ) {
+                        // Собираем ягоду
+                        collectBerry({ target: berry.element });
+                    }
+                }
+            }
+            
+            // Запуск игры
+            function startGame() {
+                score = 0;
+                gameSpeed = 1;
+                scoreValue.textContent = score;
+                berries = [];
+                
+                // Скрываем стартовый экран
+                startScreen.style.display = 'none';
+                gameOverScreen.style.display = 'none';
+                
+                // Активируем игру
+                gameActive = true;
+                
+                // Запускаем создание ягод
+                clearInterval(berryInterval);
+                berryInterval = setInterval(createBerry, 1000 / gameSpeed);
+                
+                // Запускаем проверку столкновений
+                const collisionInterval = setInterval(checkCollisions, 50);
+                
+                // Таймер игры (60 секунд)
+                setTimeout(() => {
+                    endGame();
+                    clearInterval(collisionInterval);
+                }, 60000);
+            }
+            
+            // Завершение игры
+            function endGame() {
+                gameActive = false;
+                clearInterval(berryInterval);
+                
+                // Удаляем все ягоды
+                berries.forEach(berry => {
+                    if (berry.element.parentNode) {
+                        gameContainer.removeChild(berry.element);
+                    }
+                });
+                berries = [];
+                
+                // Показываем экран завершения игры
+                finalScore.textContent = score;
+                gameOverScreen.style.display = 'flex';
+            }
+            
+            // Обработчики кнопок
+            startButton.addEventListener('click', startGame);
+            restartButton.addEventListener('click', startGame);
+            
+            // Поддержка мобильных устройств
+            startButton.addEventListener('touchstart', startGame);
+            restartButton.addEventListener('touchstart', startGame);
+            
+            // Инициализация звука
+            try {
+                collectSound.volume = 0.3;
+            } catch (e) {
+                console.log("Sound initialization error:", e);
+            }
+        });
+    </script>
+</body>
+</html>
